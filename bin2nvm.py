@@ -10,6 +10,11 @@ def optParser():
 
 def bin2nvm():
 	args = optParser()
-	print args.input_file
+	#print args.input_file
+	try:
+		with open(args.input_file, 'rb+') as fobj:
+			fobj.close()
+	except IOError:
+		print args.input_file + ' is not a valid file name'
 
 bin2nvm()
