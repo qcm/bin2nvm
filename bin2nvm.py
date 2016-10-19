@@ -52,7 +52,7 @@ class NVMTag:
 		self.TagValue = []
 		self.num = 0
 
-	def inputval(self, fobj):
+	def inputval(self, fobj = None, b_data = None, b_index = None):
 		iLSB = int(binascii.b2a_hex(self.TagLengthLSB), 16)
 		iMSB = int(binascii.b2a_hex(self.TagLengthMSB), 16)
 		self.length = iLSB + iMSB*16
@@ -60,10 +60,21 @@ class NVMTag:
 		nMSB = int(binascii.b2a_hex(self.TagNumMSB), 16)
 		self.num = nLSB + nMSB*16
 		#print self.num
-		for i in range(self.length):
-			x = fobj.read(1)
-			self.TagValue.append(x)
-			i += 1
+		if b_data is None:
+			print 'fobj'
+			for i in range(self.length):
+				x = fobj.read(1)
+				self.TagValue.append(x)
+				i += 1
+		elif fobj is None and type(b_index) is int:
+			print 'b_data'
+			#print binascii.b2a_hex(b_data[b_index])
+			b_index += NVM_TLV_TAG + NVM_TLV_LEN + NVM_TLV_ZERO_PADDING
+			for i in range(b_index, b_index + self.length):
+				self.TagValue.append(b_data[i])
+				i += 1
+		else:
+			print 'inputval error'
 	
 	def printall(self):
 		print binascii.b2a_hex(self.TagNumLSB)
@@ -95,10 +106,11 @@ def bin2nvm():
 
 	length = getDataLength(NVM_BODY_LEN)
 	
-	for i in range(NVM_TLV_DATA_START, NVM_TLV_DATA_START+3):
+	for i in range(NVM_TLV_DATA_START, NVM_TLV_DATA_START+1):
 		nvm_list.append(
-		NVMTag(i-NVM_TLV_DATA_START, bin_data[i], bin_data[i+1], bin_data[i+2], bin_data[i+3])
+			NVMTag(i-NVM_TLV_DATA_START, bin_data[i], bin_data[i+1], bin_data[i+2], bin_data[i+3])
 		)
+		nvm_list[i-NVM_TLV_DATA_START].inputval(None, bin_data, i)
 		nvm_list[i-NVM_TLV_DATA_START].printall()
 
 	with open(OUTPUT_FILENAME, 'w+') as fobj:
