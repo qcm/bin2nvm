@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import argparse
 import binascii
+from datetime import datetime
 
 NVM_TLV_DATA_START = 4
 NVM_TLV_TAG = 2
@@ -35,12 +36,24 @@ def getDataLength(l):
 	return (l1%16)+(l1/16)*16 + ((l2%16)+(l2/16)*16)*256 + ((l3%16)+(l3/16))*65536
 
 def writeHeaderToFile(fobj):
-	fobj.write('#\n')
-	fobj.write('#\n')
+	fobj.write('#\n#\n')
 	fobj.write('#	Tag Listfile\n')
-	fobj.write('#\n')
-	fobj.write('#\n')
+	fobj.write('#\n#\n')
 	fobj.write('\n')
+	fobj.write('[General]\n')
+	fobj.write('Signature = windows\n')
+	fobj.write('FormatVersion = 1.0\n')
+
+	s = ' '
+	dt = datetime.now()
+	s += dt.strftime('%A %B %d, %Y   %I:%M:%S %p')	
+	
+	fobj.write('TimeStamp =' + s)
+	fobj.write('\n\n')
+	fobj.write('[Tag]\n')
+	s = 'Num = ' + str(TAG_NUM) + '\n\n'
+	fobj.write(s)
+	
 
 class NVMTag:
 	def __init__(self, TIDX, TNL, TNB, TLL, TLM):
@@ -62,19 +75,31 @@ class NVMTag:
 		self.num = nLSB + nMSB*16
 		#print self.num
 		if b_data is None:
-			print 'fobj'
+			#print 'fobj'
 			for i in range(self.length):
 				x = fobj.read(1)
 				self.TagValue.append(x)
 				i += 1
 		elif fobj is None and type(b_index) is int:
-			print 'b_data'
+			#print 'b_data'
+			print '\t...'
 			#print binascii.b2a_hex(b_data[b_index])
 			b_index += NVM_TLV_TAG + NVM_TLV_LEN + NVM_TLV_ZERO_PADDING
 			for i in range(b_index, b_index + self.length):
 				self.TagValue.append(b_data[i])
 		else:
 			print 'inputval error'
+	
+	def writeToFile(self, fobj):
+		sTagHeader = '[Tag' + str(self.TagIndex) + ']\n'
+		sTagNum = 'TagNum = ' + str(self.num) + '\n'
+		sTagLength = 'TagLength = ' + str(self.length) + '\n'
+		sTagValue = 'TagValue =' 
+		for b in self.TagValue:
+			s = binascii.b2a_hex(b)
+			sTagValue += ' ' + s
+		sTagValue += '\n\n'
+		fobj.write(sTagHeader + sTagNum + sTagLength + sTagValue)
 	
 	def printall(self):
 		print binascii.b2a_hex(self.TagNumLSB)
@@ -101,8 +126,8 @@ def bin2nvm():
 	
 	NVM_BODY_LEN = bin_data[1:NVM_TLV_DATA_START]
 	#print NVM_BODY_LEN
-	print binascii.b2a_hex(NVM_BODY_LEN)
-	print getDataLength(NVM_BODY_LEN)
+	#print binascii.b2a_hex(NVM_BODY_LEN)
+	#print getDataLength(NVM_BODY_LEN)
 
 	total_length = getDataLength(NVM_BODY_LEN)
 	index = NVM_TLV_DATA_START
@@ -113,13 +138,16 @@ def bin2nvm():
 				bin_data[index+2], bin_data[index+3])
 		)
 		nvm_list[TAG_NUM].inputval(None, bin_data, index)
-		nvm_list[TAG_NUM].printall()
+		#nvm_list[TAG_NUM].printall()
 		index += nvm_list[TAG_NUM].length + NVM_TLV_TAG + NVM_TLV_LEN + NVM_TLV_ZERO_PADDING
 		TAG_NUM += 1
 		
 
 	with open(OUTPUT_FILENAME, 'w+') as fobj:
 		writeHeaderToFile(fobj)
+		for nvm in nvm_list:
+			nvm.writeToFile(fobj)
 		fobj.close()
+	print '\tConversion done.'
 
 bin2nvm()
