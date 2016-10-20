@@ -7,6 +7,7 @@ NVM_TLV_TAG = 2
 NVM_TLV_LEN = 2
 NVM_TLV_ZERO_PADDING = 8
 NVM_BODY_LEN = 0
+TAG_NUM = 0
 
 bin_data = []
 nvm_list = []
@@ -72,7 +73,6 @@ class NVMTag:
 			b_index += NVM_TLV_TAG + NVM_TLV_LEN + NVM_TLV_ZERO_PADDING
 			for i in range(b_index, b_index + self.length):
 				self.TagValue.append(b_data[i])
-				i += 1
 		else:
 			print 'inputval error'
 	
@@ -104,14 +104,19 @@ def bin2nvm():
 	print binascii.b2a_hex(NVM_BODY_LEN)
 	print getDataLength(NVM_BODY_LEN)
 
-	length = getDataLength(NVM_BODY_LEN)
-	
-	for i in range(NVM_TLV_DATA_START, NVM_TLV_DATA_START+1):
+	total_length = getDataLength(NVM_BODY_LEN)
+	index = NVM_TLV_DATA_START
+	global TAG_NUM
+	while index < total_length:
 		nvm_list.append(
-			NVMTag(i-NVM_TLV_DATA_START, bin_data[i], bin_data[i+1], bin_data[i+2], bin_data[i+3])
+			NVMTag(TAG_NUM, bin_data[index], bin_data[index+1], 
+				bin_data[index+2], bin_data[index+3])
 		)
-		nvm_list[i-NVM_TLV_DATA_START].inputval(None, bin_data, i)
-		nvm_list[i-NVM_TLV_DATA_START].printall()
+		nvm_list[TAG_NUM].inputval(None, bin_data, index)
+		nvm_list[TAG_NUM].printall()
+		index += nvm_list[TAG_NUM].length + NVM_TLV_TAG + NVM_TLV_LEN + NVM_TLV_ZERO_PADDING
+		TAG_NUM += 1
+		
 
 	with open(OUTPUT_FILENAME, 'w+') as fobj:
 		writeHeaderToFile(fobj)
